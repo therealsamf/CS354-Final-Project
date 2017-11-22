@@ -1,0 +1,22 @@
+{
+  "name": "dynamic-lighting",
+  "version": "0.0.1",
+  "description": "CS354 Final project",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack --progress --colors",
+    "development": "webpack --progress --colors --watch"
+  },
+  "author": "Sam Faulkner",
+  "license": "ISC",
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-preset-stage-0": "^6.24.1",
+    "webpack": "^3.8.1",
+    "webpack-dev-server": "^2.9.4"
+  },
+  "dependencies": {
+    "three": "^0.88.0"
+  }
+}
