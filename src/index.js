@@ -1,35 +1,66 @@
 
-import { Scene, OrthographicCamera, WebGLRenderer, BoxGeometry, MeshBasicMaterial, Mesh } from 'three';
+import World from './DynamicLightingWorld';
+import TileSystem from './systems/TileSystem';
+import DrawingSystem from './systems/DrawingSystem';
+import MapReader from './util/MapReader';
 
-let scene = new Scene(),
-	camera = new OrthographicCamera(
-		window.innerWidth * -0.5, 
-		window.innerWidth * 0.5, 
-		window.innerHeight * 0.5, 
-		window.innerHeight * -0.5,
-		1, 
-		10
-	),
-	renderer = new WebGLRenderer();
+import { requireAll, rejectAny } from '../dependencies/tiny-ecs/filters';
 
-renderer.setSize(window.innerWidth, window.innerHeight);
+const drawingSystemFilter = requireAll('isDrawingSystem'),
+	notDrawingSystemFilter = rejectAny('isDrawingSystem');
 
-document.body.appendChild(renderer.domElement);
+var stats = new Stats();
+stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
 
-let geometry = new BoxGeometry(100, 100, 1),
-	material = new MeshBasicMaterial({color: 0x00FF00}),
-	cube = new Mesh(geometry, material);
 
-scene.add(cube);
+let world = new World(),
+	drawingSystem = new DrawingSystem(),
+	tileSystem = new TileSystem(),
+	mapReader = new MapReader(world);
 
-camera.position.z = 5;
+world.addSystem(drawingSystem);
+world.addSystem(tileSystem);
+
+
+
+let currentDrawTime = new Date().getTime(),
+	lastDrawTime,
+	elapsedDrawTime;
 
 function animate() {
 	requestAnimationFrame(animate);
-	renderer.render(scene, camera);
 
+	lastDrawTime = currentDrawTime;
+	currentDrawTime = new Date().getTime();
+	elapsedDrawTime = currentDrawTime - lastDrawTime;
 
-	cube.rotation.z += .1;
+	stats.begin();
+	world.update(elapsedDrawTime, drawingSystemFilter);
+	stats.end();
 }
 
+let currentUpdateTime = new Date().getTime(),
+	lastUpdateTime,
+	elapsedUpdateTime,
+	updateInterval;
+
+function update() {
+
+	lastUpdateTime = currentUpdateTime;
+	currentUpdateTime = new Date().getTime();
+	elapsedUpdateTime = currentUpdateTime - lastUpdateTime;
+
+	try {
+		world.update(elapsedUpdateTime, notDrawingSystemFilter);
+	}
+	catch (e) {
+
+		clearInterval(updateInterval);
+		throw e;
+	}
+}
+
+updateInterval = setInterval(update, 60 / 1000);
+
 animate();
+
