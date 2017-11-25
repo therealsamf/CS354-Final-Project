@@ -20,23 +20,30 @@ class MapReader {
 	 * @returns {Promise}
 	 */
 	readMap(dataURI) {
+		let xhr = new XMLHttpRequest();
+
+		
 		let scriptElement = document.createElement('script');
 		scriptElement.type = 'application/json';
 
 		let returnPromise = new Promise((resolve, reject) => {
-			scriptElement.onload = () => {
-				resolve();
-			}
-			scriptElement.onerror = (error) => {
-				reject(error);
-			}
-		});
+			xhr.open('GET', encodeURI(dataURI));
 
-		scriptElement.src = dataURI;
+			xhr.onreadystatechange = () => {
+				if (xhr.readyState == XMLHttpRequest.DONE && xhr.status == 200) {
+					resolve(xhr.responseText);
+				}
+				else if (xhr.readyState == XMLHttpRequest.DONE) {
+					reject();
+				}
+			}
+
+			xhr.send();
+		});
 
 		let self = this;
 		return returnPromise
-			.then(() => self.parseMap(scriptElement.textContent));
+			.then((responseText) => self.parseMap(responseText));
 	}
 
 	/**
@@ -46,14 +53,19 @@ class MapReader {
 	parseMap(mapData) {
 		mapData = JSON.parse(mapData);
 
+		let maxRows = mapData.tiles.length,
+			// assume we have at least one row
+			maxColumns = mapData.tiles[0].length;
+
 		let rowIndex = 0,
 			columnIndex = 0;
 
 		for (let tileRow of mapData.tiles) {
+			columnIndex = 0;
 			for (let tile of tileRow) {
 
 				if (tile in mapData.tileTypes) {
-					this.addTile(rowIndex, columnIndex, mapData.tileTypes[tile]);
+					this.addTile(Math.floor(columnIndex - 0.5 * maxColumns), maxRows - Math.floor(rowIndex - 0.5 * maxRows), mapData.tileTypes[tile]);
 				}
 
 				columnIndex += 1;

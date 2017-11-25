@@ -6,12 +6,16 @@ import MapReader from './util/MapReader';
 
 import { requireAll, rejectAny } from '../dependencies/tiny-ecs/filters';
 
+import path from 'path';
+
 const drawingSystemFilter = requireAll('isDrawingSystem'),
 	notDrawingSystemFilter = rejectAny('isDrawingSystem');
 
 var stats = new Stats();
 stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
 
+document.body.appendChild(stats.domElement);
+stats.domElement.style.position = 'absolute';
 
 let world = new World(),
 	drawingSystem = new DrawingSystem(),
@@ -60,7 +64,7 @@ function update() {
 	}
 }
 
-updateInterval = setInterval(update, 60 / 1000);
-
+setInterval(update, 60 / 1000);
 animate();
 
+mapReader.readMap(path.resolve(__dirname, '..', 'assets', 'maps', 'map1.json'))

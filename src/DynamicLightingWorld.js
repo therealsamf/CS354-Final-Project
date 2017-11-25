@@ -41,6 +41,26 @@ class DynamicLightingWorld extends World {
 	setScene(scene) {
 		this._scene = scene;
 	}
+
+	/**
+	 * @description - Used for getting images. Acts sort fo like a cache
+	 * @param {String} imageURI
+	 * @returns {Promise}
+	 */
+	getImage(imageURI) {
+		return new Promise((resolve, reject) => {
+			let img = new Image();
+
+			img.onload = () => {
+				resolve(img);
+			};
+			img.onerror = (err) => {
+				reject(err);
+			};
+
+			img.src = imageURI;
+		});
+	}
 }
 
 export default DynamicLightingWorld;

@@ -9,7 +9,9 @@ import {
 	Mesh,
 	ClampToEdgeWrapping,
 	NearestFilter,
-	CanvasTexture 
+	UVMapping,
+	CanvasTexture,
+	MeshBasicMaterial
 } from 'three';
 
 import { System } from '../../dependencies/tiny-ecs';
@@ -61,6 +63,8 @@ class TileSystem extends System {
 	onAddToWorld(world) {
 		// make sure the camera is aware of the tile layer
 		world.getCamera().layers.enable(TILE_LAYER);
+
+		this.scene = world.getScene();
 	}
 
 	/**
@@ -68,14 +72,15 @@ class TileSystem extends System {
 	 * @param {Number} delta
 	 */
 	update(delta) {
-		console.log(this.world.getCamera().position);
+		
 		let clippingRect = this.world.getCamera().getFrustum();
 
 		for (let chunk of this.chunks) {
-			if (chunk.dirty())
-				chunk.update();
+			if (chunk.dirty()) {
+				chunk.update(this.scene);
+			}
 
-			if (chunk.collide(clippingRect)) {
+			if (chunk.collide(clippingRect.x, clippingRect.y, clippingRect.top, clippingRect.bottom)) {
 				chunk.show();
 			}
 			else {
@@ -107,8 +112,8 @@ class TileSystem extends System {
 			let chunkX = chunk.getX(),
 				chunkY = chunk.getY();
 
-			let collidesX = chunkX <= x && x <= chunkX + CHUNK_SIZE,
-				collidesY = chunkY <= y && y <= chunkY + CHUNK_SIZE;
+			let collidesX = chunkX <= x && x < chunkX + CHUNK_SIZE,
+				collidesY = chunkY <= y && y < chunkY + CHUNK_SIZE;
 
 			if (collidesX && collidesY) {
 				return chunk;
@@ -164,22 +169,28 @@ class Chunk {
 		let tileTextureURI = tileEntity.TileComponent.atlas,
 			xCoords = tileEntity.TileComponent.xTextureCoords,
 			yCoords = tileEntity.TileComponent.yTextureCoords,
-			destX = (tileEntity.TileTransform.x % CHUNK_SIZE) * TILE_SIZE,
-			destY = (tileEntity.TileTransform.y % CHUNK_SIZE) * TILE_SIZE;
+			destX = (tileEntity.TileTransform.x - this.getX()) * 16,
+			destY = (CHUNK_SIZE - tileEntity.TileTransform.y + this.getY() - 1) * 16;
 
+		
+
+		
 		if (!this.canvas)
-			this.canvas = Chunk.createChunkCanvas();
+			this.canvas = Chunk.createChunkCanvas(this.getX(), this.getY());
 
-		this._dirty = true,
-			self = this;
+		this._dirty = true;
+		let self = this;
 
 		return this.world.getImage(tileTextureURI)
 			// place the tile within the chunk's texture
 			.then((image) => {
-				self.canvas.drawImage(image, 
-					xCoords, yCoords, TILE_SIZE, TILE_SIZE,
-					destX, destY, TILE_SIZE, TILE_SIZE
+				let ctx = self.canvas.getContext('2d');
+				ctx.drawImage(image, 
+					xCoords, yCoords, 16, 16,
+					destX, destY, 16, 16
 				);
+				
+				self._dirty = true;
 			});
 	}
 
@@ -190,7 +201,9 @@ class Chunk {
 	 * @param {Scene} scene
 	 */
 	update(scene) {
-		scene.remove(this.chunkObject);
+		if (this.chunkObject) {
+			scene.remove(this.chunkObject);
+		}
 
 		// create geometry
 		let geometry = Chunk.createChunkGeometry();
@@ -200,11 +213,11 @@ class Chunk {
 		this.chunkObject = new Mesh(geometry, material);
 
 		// translate mesh to the given spot
-		mesh.translateX(this.getX() * TILE_SIZE);
-		mesh.translateY(this.getY() * TILE_SIZE);
+		this.chunkObject.translateX(this.getX() * TILE_SIZE);
+		this.chunkObject.translateY(this.getY() * TILE_SIZE);
 
 		// add it to the scene
-		scene.add(mesh);
+		scene.add(this.chunkObject);
 
 		this._dirty = false;
 	}
@@ -214,7 +227,6 @@ class Chunk {
 	 * @returns {Material}
 	 */
 	getMaterial() {
-
 		// create a CanvasTexture
 		let texture = new CanvasTexture(this.canvas, UVMapping, ClampToEdgeWrapping, ClampToEdgeWrapping, NearestFilter);
 
@@ -237,9 +249,9 @@ class Chunk {
 		if (this.getX() * TILE_SIZE > rightX)
 			return false;
 
-		if ((this.getY() + CHUNK_SIZE) * TILE_SIZE < topY)
+		if ((this.getY() + CHUNK_SIZE) * TILE_SIZE < bottomY)
 			return false;
-		if (this.getY() * TILE_SIZE > bottomY)
+		if (this.getY() * TILE_SIZE > topY)
 			return false;
 
 		return true;
@@ -247,13 +259,15 @@ class Chunk {
 
 	/**
 	 * @description - Creates and returns a correctly sized canvas
+	 * @param {Number=} x
+	 * @param {Number=} y
 	 * @returns {Canvas}
 	 */
-	static createChunkCanvas() {
+	static createChunkCanvas(x, y) {
 		let canvas = document.createElement('canvas');
 
-		canvas.width = CHUNK_SIZE * TILE_SIZE;
-		canvas.height = CHUNK_SIZE * TILE_SIZE;
+		canvas.width = CHUNK_SIZE * 16;
+		canvas.height = CHUNK_SIZE * 16;
 
 		return canvas;
 	}
@@ -273,18 +287,18 @@ class Chunk {
 
 			-halfChunkLength, halfChunkLength, TILE_Z_INDEX,
 		]),
-			indices = Uint8Array([
+			indices = new Uint8Array([
 				0, 1, 2,
 				2, 3, 0
 			]),
-			uvs = Float32Array([
+			uvs = new Float32Array([
 				0.0, 0.0,
 				1.0, 0.0,
 				1.0, 1.0,
 
-				1.0, 1.0,
 				0.0, 1.0,
-				0.0, 0.0
+				0.0, 0.0,
+				1.0, 1.0				
 			]);
 
 		let geometry = new BufferGeometry();

@@ -3,11 +3,12 @@
  * System responsible for drawing the scene
  */
 
-import { WebGLRenderer, Scene, OrthographicCamera } from 'three';
+import { WebGLRenderer, Scene } from 'three';
+import DynamicLightingOrthographicCamera from '../util/DynamicLightingOrthographicCamera';
 import { System } from '../../dependencies/tiny-ecs';
 
 const Z_NEAR = 1,
-	Z_FAR = 10;
+	Z_FAR = 100;
 
 class DrawingSystem extends System {
 	/**
@@ -22,7 +23,7 @@ class DrawingSystem extends System {
 		document.body.appendChild(this.renderer.domElement);
 
 		this.scene = new Scene();
-		this.camera = new OrthographicCamera(
+		this.camera = new DynamicLightingOrthographicCamera(
 			window.innerWidth * -0.5, 
 			window.innerWidth * 0.5, 
 			window.innerHeight * 0.5, 
@@ -30,6 +31,8 @@ class DrawingSystem extends System {
 			Z_NEAR, 
 			Z_FAR
 		);
+
+		this.camera.position.z = 50;
 
 		// used to filter the systems
 		this.isDrawingSystem = true;

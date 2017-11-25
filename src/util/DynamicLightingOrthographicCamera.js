@@ -8,12 +8,16 @@ import { OrthographicCamera } from 'three';
 class DynamicLightingOrthographicCamera extends OrthographicCamera {
 
 	/**
-	 * @description - Returns the frustum of the camera, mapped from 0 to windowWidth/windowHeight
-	 * rather than - 1/2 * windowWidth/windowHeight to 1/2 * windowWidth/windowHeight
+	 * @description - Returns the current frustum position of the camera
 	 * @returns {Object}
 	 */
 	getFrustum() {
-		
+		return {
+			top: this.position.y + this.top,
+			right: this.position.x + this.right,
+			bottom: this.position.y + this.bottom,
+			left: this.position.x + this.left
+		}
 	}
 }
 
