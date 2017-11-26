@@ -30,6 +30,14 @@ class DynamicLightingWorld extends World {
 	}
 
 	/**
+	 * @description - Accessor for the renderer
+	 * @returns {WebGLRenderer}
+	 */
+	getRenderer() {
+		return this._renderer;
+	}
+
+	/**
 	 * @description - Mutator for the camera. Should
 	 * really only be called by the DrawingSystem
 	 * @param {Camera}
@@ -45,6 +53,15 @@ class DynamicLightingWorld extends World {
 	 */
 	setScene(scene) {
 		this._scene = scene;
+	}
+
+	/**
+	 * @description - Mutator for the renderer. Should
+	 * really only be called by the DrawingSystem
+	 * @param {WebGLRenderer} renderer
+	 */
+	setRenderer(renderer) {
+		this._renderer = renderer;
 	}
 
 	/**

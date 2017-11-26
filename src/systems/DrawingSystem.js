@@ -50,6 +50,8 @@ class DrawingSystem extends System {
 			world.setCamera(this.camera);
 		if (world.setScene)
 			world.setScene(this.scene);
+		if (world.setRenderer)
+			world.setRenderer(this.renderer);
 
 		// really no need to expose the renderer to the world
 	}

@@ -392,9 +392,6 @@ class Chunk {
 	createInstancedGeometry() {
 		const { BoxBufferGeometry } = require('three');
 
-		// let ge = new BoxBufferGeometry(1, 1, 1);
-		// console.log('uvs', ge.attributes.uv);
-		// console.log('positions', ge.attributes.position);
 		let halfTileLength = TILE_SIZE * 0.5,
 			tileOffset = - 0.5 * CHUNK_SIZE * TILE_SIZE + halfTileLength;
 
@@ -427,13 +424,6 @@ class Chunk {
 			offsetX = (transform.x - this.getX()) * TILE_SIZE + tileOffset;
 			offsetY = (transform.y - this.getY()) * TILE_SIZE + tileOffset;
 
-			// console.log('***********');
-			// console.log('Chunk: (' + this.getX() + ', ' + this.getY() + ')');
-			// console.log('transform: (' + transform.x + ', ' + transform.y + ')');
-			// console.log('offsetX: ', offsetX);
-			// console.log('offsetY: ', offsetY);
-			// console.log('***********');
-
 			let uvBottomLeft = tile.TileComponent.uvBottomLeft,
 				uvBottomRight = tile.TileComponent.uvBottomRight,
 				uvTopRight = tile.TileComponent.uvTopRight,
@@ -444,18 +434,6 @@ class Chunk {
 
 			firstRealUV.push(uvBottomLeft[0]);
 			firstRealUV.push(uvBottomLeft[1]);
-
-			// firstRealUV.push(uvBottomRight[0]);
-			// firstRealUV.push(uvBottomRight[1]);
-
-			// firstRealUV.push(uvTopRight[0]);
-			// firstRealUV.push(uvTopRight[1]);
-
-			// lastRealUV.push(uvTopLeft[0]);
-			// lastRealUV.push(uvTopLeft[1]);
-
-			// lastRealUV.push(uvBottomLeft[0]);
-			// lastRealUV.push(uvBottomLeft[1]);	
 
 			lastRealUV.push(uvTopRight[0]);
 			lastRealUV.push(uvTopRight[1]);
