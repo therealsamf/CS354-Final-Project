@@ -65,7 +65,7 @@ class MapReader {
 			for (let tile of tileRow) {
 
 				if (tile in mapData.tileTypes) {
-					this.addTile(Math.floor(columnIndex - 0.5 * maxColumns), maxRows - Math.floor(rowIndex - 0.5 * maxRows), mapData.tileTypes[tile]);
+					this.addTile(Math.floor(columnIndex - 0.5 * maxColumns), Math.floor(0.5 * maxRows - rowIndex), mapData.tileTypes[tile]);
 				}
 
 				columnIndex += 1;
@@ -82,11 +82,11 @@ class MapReader {
 	 * @param {Number} y
 	 * @param {Object} data
 	 */
-	addTile(row, column, data) {
+	addTile(x, y, data) {
 		let entity = {
 			TileTransform: {
-				x: row,
-				y: column
+				x: x,
+				y: y
 			},
 			TileComponent: {
 				atlas: data.texture,
