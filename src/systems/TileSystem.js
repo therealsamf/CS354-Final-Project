@@ -5,17 +5,25 @@
 
 import { 
 	BufferGeometry, 
+	InstancedBufferGeometry,
+	PlaneGeometry,
 	BufferAttribute, 
+	InstancedBufferAttribute,
 	Mesh,
 	ClampToEdgeWrapping,
 	NearestFilter,
 	UVMapping,
+	Texture,
 	CanvasTexture,
-	MeshBasicMaterial
+	MeshBasicMaterial,
+	RawShaderMaterial,
+	TextureLoader
 } from 'three';
 
 import { System } from '../../dependencies/tiny-ecs';
 import { requireAll } from '../../dependencies/tiny-ecs/filters';
+import TileVertexShader from '../shaders/TileVertex';
+import TileFragmentShader from '../shaders/TileFragment';
 
 const tileSystemFilter = requireAll('TileComponent', 'TileTransform');
 
@@ -23,6 +31,8 @@ const CHUNK_SIZE = 8,
 	TILE_SIZE = 30,
 	TILE_Z_INDEX = 1,
 	TILE_LAYER = 2;
+
+const DEBUG = true;
 
 class TileSystem extends System {
 	constructor() {
@@ -156,6 +166,8 @@ class Chunk {
 		this.world = world;
 
 		this._dirty = true;
+
+		this._tiles = [];
 	}
 
 	/**
@@ -164,6 +176,8 @@ class Chunk {
 	 * @param {Entity} tileEntity
 	 */
 	addTile(tileEntity) {
+
+		this._tiles.push(Object.assign({}, tileEntity));
 
 		// retrieve the tile's texture, potentially from an atlas
 		let tileTextureURI = tileEntity.TileComponent.atlas,
@@ -178,18 +192,18 @@ class Chunk {
 		if (!this.canvas)
 			this.canvas = Chunk.createChunkCanvas(this.getX(), this.getY());
 
-		this._dirty = true;
 		let self = this;
 
-		return this.world.getImage(tileTextureURI)
+		return this.world.getTexture(tileTextureURI)
 			// place the tile within the chunk's texture
 			.then((image) => {
-				let ctx = self.canvas.getContext('2d');
-				ctx.drawImage(image, 
-					xCoords, yCoords, 16, 16,
-					destX, destY, 16, 16
-				);
+				// let ctx = self.canvas.getContext('2d');
+				// ctx.drawImage(image, 
+				// 	xCoords, yCoords, 16, 16,
+				// 	destX, destY, 16, 16
+				// );
 				
+				self._image = image;
 				self._dirty = true;
 			});
 	}
@@ -204,20 +218,32 @@ class Chunk {
 		if (this.chunkObject) {
 			scene.remove(this.chunkObject);
 		}
+		if (this.debugObject) {
+			scene.remove(this.debugObject);
+		}
+
+		// no image yet
+		if (!this._image)
+			return;
 
 		// create geometry
-		let geometry = Chunk.createChunkGeometry();
+		let geometry = this.createInstancedGeometry();
 
 		// create material and mesh with CanvasTexture
-		let material = this.getMaterial();
+		let material = this.getShaderMaterial();
 		this.chunkObject = new Mesh(geometry, material);
 
 		// translate mesh to the given spot
-		this.chunkObject.translateX(this.getX() * TILE_SIZE);
-		this.chunkObject.translateY(this.getY() * TILE_SIZE);
+		this.chunkObject.translateX(this.getX() * TILE_SIZE + 0.5 * CHUNK_SIZE * TILE_SIZE);
+		this.chunkObject.translateY(this.getY() * TILE_SIZE + 0.5 * CHUNK_SIZE * TILE_SIZE);
 
 		// add it to the scene
 		scene.add(this.chunkObject);
+
+		if (DEBUG) {
+			this.debugObject = this.createDebugObject();
+			scene.add(this.debugObject);
+		}
 
 		this._dirty = false;
 	}
@@ -232,6 +258,26 @@ class Chunk {
 
 		// create and return a material using the texture as the color map
 		return new MeshBasicMaterial({map: texture});
+	}
+
+	/**
+	 * @description - Creates the material using shaders
+	 * @returns {Material}
+	 */
+	getShaderMaterial() {
+		let texture = this._image;
+		texture.magFilter = NearestFilter;
+
+		let material = new RawShaderMaterial({
+			uniforms: {
+				map: { value: texture }
+			},
+			vertexShader: TileVertexShader,
+			fragmentShader: TileFragmentShader
+		});
+
+
+		return material;
 	}
 
 	/**
@@ -273,6 +319,34 @@ class Chunk {
 	}
 
 	/**
+	 * @description - Returns a debug object used for determining 
+	 * chunk boundaries
+	 * @returns {Mesh}
+	 */
+	createDebugObject() {
+		let geometry = new PlaneGeometry(CHUNK_SIZE * TILE_SIZE, CHUNK_SIZE * TILE_SIZE);
+
+		let canvas = document.createElement('canvas');
+		canvas.width = 16 * CHUNK_SIZE;
+		canvas.height = 16 * CHUNK_SIZE;
+
+		let context = canvas.getContext('2d');
+		context.strokeStyle = 'pink';
+		context.rect(0, 0, canvas.width, canvas.height);
+		context.stroke();
+
+		let material = new MeshBasicMaterial({map: new CanvasTexture(canvas), transparent: true});
+
+		let mesh = new Mesh(geometry, material);
+		mesh.translateX(this.getX() * TILE_SIZE + 0.5 * CHUNK_SIZE * TILE_SIZE);
+		mesh.translateY(this.getY() * TILE_SIZE + 0.5 * CHUNK_SIZE * TILE_SIZE);
+
+		mesh.translateZ(TILE_Z_INDEX + 1);
+
+		return mesh;
+	}
+
+	/**
 	 * @description - Returns the geometry for a chunk, two triangles
 	 * correctly sized according to the constants for chunk sizes
 	 * @static
@@ -305,6 +379,107 @@ class Chunk {
 		geometry.addAttribute('position', new BufferAttribute(vertices, 3));
 		geometry.setIndex(new BufferAttribute(indices, 1));
 		geometry.addAttribute('uv', new BufferAttribute(uvs, 2));
+
+		return geometry;
+	}
+
+	/**
+	 * @description - Returns an intanced buffer geometry. As the instances
+	 * are highly dependent on the current state of the tiles within the 
+	 * chunk, this method isn't static
+	 * @returns {InstancedBufferGeometry}
+	 */
+	createInstancedGeometry() {
+		const { BoxBufferGeometry } = require('three');
+
+		// let ge = new BoxBufferGeometry(1, 1, 1);
+		// console.log('uvs', ge.attributes.uv);
+		// console.log('positions', ge.attributes.position);
+		let halfTileLength = TILE_SIZE * 0.5,
+			tileOffset = - 0.5 * CHUNK_SIZE * TILE_SIZE + halfTileLength;
+
+		let positions = new Float32Array([
+			-halfTileLength, -halfTileLength, TILE_Z_INDEX,
+			halfTileLength, -halfTileLength, TILE_Z_INDEX,
+			halfTileLength, halfTileLength, TILE_Z_INDEX,
+			-halfTileLength, halfTileLength, TILE_Z_INDEX
+		]),
+			indices = new Uint8Array([
+				0, 1, 2,
+				2, 3, 0
+			]);
+
+		let geometry = new InstancedBufferGeometry();
+		geometry.addAttribute('position', new BufferAttribute(positions, 3));
+		geometry.setIndex(new BufferAttribute(indices, 1));
+
+		let offsets = [],
+			uvs = [],
+			firstRealUV = [],
+			lastRealUV = [];
+
+		for (let tile of this._tiles) {
+
+			let transform = tile.TileTransform,
+				offsetX = ((transform.x - this.getX())) * TILE_SIZE,
+				offsetY = ((transform.y - this.getY())) * TILE_SIZE;
+
+			offsetX = (transform.x - this.getX()) * TILE_SIZE + tileOffset;
+			offsetY = (transform.y - this.getY()) * TILE_SIZE + tileOffset;
+
+			// console.log('***********');
+			// console.log('Chunk: (' + this.getX() + ', ' + this.getY() + ')');
+			// console.log('transform: (' + transform.x + ', ' + transform.y + ')');
+			// console.log('offsetX: ', offsetX);
+			// console.log('offsetY: ', offsetY);
+			// console.log('***********');
+
+			let uvBottomLeft = tile.TileComponent.uvBottomLeft,
+				uvBottomRight = tile.TileComponent.uvBottomRight,
+				uvTopRight = tile.TileComponent.uvTopRight,
+				uvTopLeft = tile.TileComponent.uvTopLeft;
+
+			offsets.push(offsetX);
+			offsets.push(offsetY);
+
+			firstRealUV.push(uvBottomLeft[0]);
+			firstRealUV.push(uvBottomLeft[1]);
+
+			// firstRealUV.push(uvBottomRight[0]);
+			// firstRealUV.push(uvBottomRight[1]);
+
+			// firstRealUV.push(uvTopRight[0]);
+			// firstRealUV.push(uvTopRight[1]);
+
+			// lastRealUV.push(uvTopLeft[0]);
+			// lastRealUV.push(uvTopLeft[1]);
+
+			// lastRealUV.push(uvBottomLeft[0]);
+			// lastRealUV.push(uvBottomLeft[1]);	
+
+			lastRealUV.push(uvTopRight[0]);
+			lastRealUV.push(uvTopRight[1]);
+
+			for (let value of [
+				0.0, 0.0,
+				1.0, 0.0,
+				1.0, 1.0,
+
+				0.0, 1.0,
+				0.0, 0.0,
+				1.0, 1.0
+				])
+				uvs.push(value);
+		}
+
+		geometry.addAttribute('offset', new InstancedBufferAttribute(new Float32Array(offsets), 2));
+		let uvsAttribute = new BufferAttribute(new Float32Array(uvs), 2);
+		let firstRealUVAttribute = new InstancedBufferAttribute(new Float32Array(firstRealUV), 2);
+		let lastRealUVAttribute = new InstancedBufferAttribute(new Float32Array(lastRealUV), 2);
+
+		geometry.addAttribute('uv', uvsAttribute);
+		geometry.addAttribute('firstrealuv', firstRealUVAttribute);
+		geometry.addAttribute('lastrealuv', lastRealUVAttribute);
 
 		return geometry;
 	}

@@ -91,7 +91,12 @@ class MapReader {
 			TileComponent: {
 				atlas: data.texture,
 				xTextureCoords: data.xTextureCoords,
-				yTextureCoords: data.yTextureCoords
+				yTextureCoords: data.yTextureCoords,
+
+				uvBottomLeft: data.uvBottomLeft,
+				uvBottomRight: data.uvBottomRight,
+				uvTopRight: data.uvTopRight,
+				uvTopLeft: data.uvTopLeft
 			}
 		};
 
