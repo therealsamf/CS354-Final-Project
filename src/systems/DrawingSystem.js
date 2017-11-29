@@ -53,7 +53,6 @@ class DrawingSystem extends System {
 		if (world.setRenderer)
 			world.setRenderer(this.renderer);
 
-		// really no need to expose the renderer to the world
 	}
 
 	/**

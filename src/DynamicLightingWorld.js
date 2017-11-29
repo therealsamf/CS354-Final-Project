@@ -100,7 +100,31 @@ class DynamicLightingWorld extends World {
 	 * @returns {Texture}
 	 */
 	getTexture(textureURI) {
-		return Promise.resolve(this._textureLoader.load(textureURI));
+		if (!this.textures) {
+			this.textures = {};
+		}
+
+		if (this.textures[textureURI]) {
+			return Promise.resolve(this.textures[textureURI]);
+		}
+		else {
+			let texture = this._textureLoader.load(textureURI);
+			this.textures[textureURI] = texture;
+			return Promise.resolve(texture);
+		}
+	}
+
+	/**
+	 * @description - Mutator for the internal cache
+	 * of textures that the World uses
+	 * @param {String} textureURI
+	 * @param {Texture} texture - THREE created texture object
+	 */
+	setTexture(textureURI, texture) {
+		if (!this.textures)
+			this.textures = {};
+
+		this.textures[textureURI] = texture;
 	}
 }
 

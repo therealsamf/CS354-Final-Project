@@ -180,7 +180,9 @@ class Chunk {
 		this._tiles.push(Object.assign({}, tileEntity));
 
 		// retrieve the tile's texture, potentially from an atlas
-		let tileTextureURI = tileEntity.TileComponent.atlas,
+		let tileTextureURI = tileEntity.TileComponent.diffuse.texture,
+
+
 			xCoords = tileEntity.TileComponent.xTextureCoords,
 			yCoords = tileEntity.TileComponent.yTextureCoords,
 			destX = (tileEntity.TileTransform.x - this.getX()) * 16,
@@ -412,8 +414,9 @@ class Chunk {
 
 		let offsets = [],
 			uvs = [],
-			firstRealUV = [],
-			lastRealUV = [];
+			diffuseUVs = [],
+			normalUVs = [],
+			ambientReflectionConstant = [];
 
 		for (let tile of this._tiles) {
 
@@ -424,19 +427,23 @@ class Chunk {
 			offsetX = (transform.x - this.getX()) * TILE_SIZE + tileOffset;
 			offsetY = (transform.y - this.getY()) * TILE_SIZE + tileOffset;
 
-			let uvBottomLeft = tile.TileComponent.uvBottomLeft,
-				uvBottomRight = tile.TileComponent.uvBottomRight,
-				uvTopRight = tile.TileComponent.uvTopRight,
-				uvTopLeft = tile.TileComponent.uvTopLeft;
+			let diffuseUVBottomLeft = tile.TileComponent.diffuse.uvBottomLeft,
+				diffuseUVTopRight = tile.TileComponent.diffuse.uvTopRight;
+			let normalUVBottomLeft = tile.TileComponent.normal.uvBottomLeft,
+				normalUVTopRight = tile.TileComponent.normal.uvTopRight;
 
 			offsets.push(offsetX);
 			offsets.push(offsetY);
 
-			firstRealUV.push(uvBottomLeft[0]);
-			firstRealUV.push(uvBottomLeft[1]);
+			diffuseUVs.push(diffuseUVBottomLeft[0]);
+			diffuseUVs.push(diffuseUVBottomLeft[1]);
+			diffuseUVs.push(diffuseUVTopRight[0]);
+			diffuseUVs.push(diffuseUVTopRight[1]);
 
-			lastRealUV.push(uvTopRight[0]);
-			lastRealUV.push(uvTopRight[1]);
+			normalUVs.push(normalUVBottomLeft[0])
+			normalUVs.push(normalUVBottomLeft[1])
+			normalUVs.push(normalUVTopRight[0])
+			normalUVs.push(normalUVTopRight[1])
 
 			for (let value of [
 				0.0, 0.0,
@@ -448,16 +455,20 @@ class Chunk {
 				1.0, 1.0
 				])
 				uvs.push(value);
+
+			ambientReflectionConstant.push(tile.TileComponent.material.ambientCoefficient);
 		}
 
 		geometry.addAttribute('offset', new InstancedBufferAttribute(new Float32Array(offsets), 2));
 		let uvsAttribute = new BufferAttribute(new Float32Array(uvs), 2);
-		let firstRealUVAttribute = new InstancedBufferAttribute(new Float32Array(firstRealUV), 2);
-		let lastRealUVAttribute = new InstancedBufferAttribute(new Float32Array(lastRealUV), 2);
+		let diffuseUVsAttribute = new InstancedBufferAttribute(new Float32Array(diffuseUVs), 4);
+		let normalUVsAttribute = new InstancedBufferAttribute(new Float32Array(normalUVs), 4);
+		let ambientReflectionConstantAttribute = new InstancedBufferAttribute(new Float32Array(ambientReflectionConstant), 1);
 
 		geometry.addAttribute('uv', uvsAttribute);
-		geometry.addAttribute('firstrealuv', firstRealUVAttribute);
-		geometry.addAttribute('lastrealuv', lastRealUVAttribute);
+		geometry.addAttribute('diffuseuvs', diffuseUVsAttribute);
+		geometry.addAttribute('normaluvs', normalUVsAttribute);
+		geometry.addAttribute('ambientreflectionconstant', ambientReflectionConstantAttribute);
 
 		return geometry;
 	}

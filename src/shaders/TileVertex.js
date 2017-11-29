@@ -8,12 +8,16 @@ let vertexShaderSrc = `
 	attribute vec3 position;
 	attribute vec2 offset;
 	attribute vec2 uv;
-	attribute vec2 firstrealuv;
-	attribute vec2 lastrealuv;
+	attribute vec4 diffuseuvs;
+	attribute vec4 normaluvs;
+
+	attribute float ambientreflectionconstant;
 
 	varying vec2 vUv;
-	varying vec2 vFirstrealuv;
-	varying vec2 vLastrealuv;
+	varying vec4 vDiffuseUVs;
+	varying vec4 vNormalUVs;
+
+	varying float vAmbientReflectionConstant;
 
 	void main() {
 		vec3 vPosition = position;
@@ -21,8 +25,9 @@ let vertexShaderSrc = `
 		vPosition.y = vPosition.y + offset.y;
 
 		vUv = uv;
-		vFirstrealuv = firstrealuv;
-		vLastrealuv = lastrealuv;
+		vDiffuseUVs = diffuseuvs;
+		vNormalUVs = normaluvs;
+		vAmbientReflectionConstant = ambientreflectionconstant;
 		
 		gl_Position = projectionMatrix * modelViewMatrix * vec4(vPosition, 1.0);
 	}
