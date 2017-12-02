@@ -83,4 +83,4 @@ function update() {
 setInterval(update, 60 / 1000);
 animate();
 
-mapReader.readMap(path.resolve(__dirname, '..', 'assets', 'maps', 'map1.json'))
+mapReader.readMap(path.resolve('assets', 'maps', 'map1.json'));
