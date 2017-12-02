@@ -17,7 +17,7 @@ import {
 	CanvasTexture,
 	MeshBasicMaterial,
 	RawShaderMaterial,
-	TextureLoader
+	Vector3
 } from 'three';
 
 import { System } from '../../dependencies/tiny-ecs';
@@ -223,6 +223,9 @@ class Chunk {
 		if (this.debugObject) {
 			scene.remove(this.debugObject);
 		}
+		if (this.worldObject) {
+			this.world.removeEntity(this.worldObject);
+		}
 
 		// no image yet
 		if (!this._image)
@@ -234,6 +237,11 @@ class Chunk {
 		// create material and mesh with CanvasTexture
 		let material = this.getShaderMaterial();
 		this.chunkObject = new Mesh(geometry, material);
+		this.worldObject = {
+			ShaderComponent: {
+				material: this.chunkObject.material
+			}
+		};
 
 		// translate mesh to the given spot
 		this.chunkObject.translateX(this.getX() * TILE_SIZE + 0.5 * CHUNK_SIZE * TILE_SIZE);
@@ -241,6 +249,8 @@ class Chunk {
 
 		// add it to the scene
 		scene.add(this.chunkObject);
+		// add the 'world object' to the world
+		this.world.addEntity(this.worldObject);
 
 		if (DEBUG) {
 			this.debugObject = this.createDebugObject();
@@ -272,12 +282,24 @@ class Chunk {
 
 		let material = new RawShaderMaterial({
 			uniforms: {
-				map: { value: texture }
+				map: { value: texture },
+				directionalLights: {
+					value: [],
+					properties: {
+						direction: {},
+						color: {}
+					}
+				}
 			},
 			vertexShader: TileVertexShader,
 			fragmentShader: TileFragmentShader
 		});
 
+		let dummyDirectionalLight = {};
+		dummyDirectionalLight.direction = new Vector3(0.0, 0.0, 0.0);
+		dummyDirectionalLight.color = new Vector3(0.0, 0.0, 0.0);
+
+		material.uniforms.directionalLights.value.push(dummyDirectionalLight);
 
 		return material;
 	}

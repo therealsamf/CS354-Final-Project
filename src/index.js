@@ -1,7 +1,12 @@
 
 import World from './DynamicLightingWorld';
+
 import TileSystem from './systems/TileSystem';
 import DrawingSystem from './systems/DrawingSystem';
+import TimeOfDaySystem from './systems/TimeOfDaySystem';
+import DirectionalLightingSystem from './systems/DirectionalLightingSystem';
+
+
 import MapReader from './util/MapReader';
 import RenderStats from './util/RenderStats';
 
@@ -26,11 +31,14 @@ renderStats.domElement.style.bottom	= '0px'
 let world = new World(),
 	drawingSystem = new DrawingSystem(),
 	tileSystem = new TileSystem(),
+	directionalLightingSystem = new DirectionalLightingSystem(),
+	timeOfDaySystem = new TimeOfDaySystem(),
 	mapReader = new MapReader(world);
 
 world.addSystem(drawingSystem);
 world.addSystem(tileSystem);
-
+world.addSystem(directionalLightingSystem);
+world.addSystem(timeOfDaySystem);
 
 
 let currentDrawTime = new Date().getTime(),

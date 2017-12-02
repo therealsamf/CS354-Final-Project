@@ -1,8 +1,17 @@
 
 let fragmentShaderSrc = `
+
+	#define NUM_DIRECTIONAL_LIGHTS 1
+
 	precision highp float;
 
+	struct DirectionalLight {
+		vec3 direction;
+		vec3 color;
+	};
+
 	uniform sampler2D map;
+	uniform DirectionalLight directionalLights[NUM_DIRECTIONAL_LIGHTS];
 
 	varying vec2 vUv;
 	varying vec4 vDiffuseUVs;
@@ -19,14 +28,19 @@ let fragmentShaderSrc = `
 
 		vec3 normal = vec3(normalColor);
 		normal = normalize(normal - vec3(0.5, 0.5, 0.5));
-		vec3 lightDirection = normalize(vec3(1.0, 0.5, 1.0));
 
-		float lambertianReflectance = max(dot(normal, lightDirection), 0.0);
+		vec3 resultingColor = vec3(0.0, 0.0, 0.0);
 
+		for (int i = 0; i < NUM_DIRECTIONAL_LIGHTS; i++) {
+			vec3 lightDirection = normalize(directionalLights[i].direction);
+			float lambertianReflectance = max(dot(normal, lightDirection), 0.0);
+
+			resultingColor += lambertianReflectance * vec3(diffuseColor) * directionalLights[i].color;
+		}
 
 		vec4 ambientLighting = vec4(0.15, 0.15, 0.15, 0.0);
 
-		gl_FragColor = lambertianReflectance * diffuseColor + vAmbientReflectionConstant * ambientLighting;
+		gl_FragColor = vec4(resultingColor, 1.0) + vAmbientReflectionConstant * ambientLighting;
 	}
 `;
 
