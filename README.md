@@ -4,6 +4,7 @@ This is my final project entry for CS354. The goal of the project is to produce 
 The project currently uses Pokemon tiles to simulate dynamic lighting within a tileset that attempts to emulate 3D with 2D tiles
 
 
+[Github Repo](https://github.com/therealsamf/CS354-Final-Project)
 You can see the project in action [here](http://www.cs.utexas.edu/users/samuelf/dynamic_lighting/). 
 
 Note: The live demo build won't be updated as development progresses. This will be updated for the progress report (12/1), the presentation (12/4), and at turn in (12/11)
