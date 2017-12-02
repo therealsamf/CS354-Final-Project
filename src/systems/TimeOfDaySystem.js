@@ -54,7 +54,10 @@ class TimeOfDaySystem extends System {
 		if (!world.gui)
 			world.gui = new dat.GUI();
 
-		world.gui.add(this, 'updateTimeManually');
+		var self = this;
+		world.gui.add(this, 'updateTimeManually').onChange(() => {
+			self.currentDelta = 0;
+		});
 		world.gui.add(this, 'timeOfDay', 0, FULL_DAY * 2).listen();
 		world.gui.add(this, 'timeSpeed', 1, 25);
 

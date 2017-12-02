@@ -32,13 +32,13 @@ const CHUNK_SIZE = 8,
 	TILE_Z_INDEX = 1,
 	TILE_LAYER = 2;
 
-const DEBUG = true;
-
 class TileSystem extends System {
 	constructor() {
 		super();
 
 		this.chunks = [];
+
+		this.drawDebugChunks = false;
 	}
 	/**
 	 * @description - Filters the correct entities into the system
@@ -75,6 +75,17 @@ class TileSystem extends System {
 		world.getCamera().layers.enable(TILE_LAYER);
 
 		this.scene = world.getScene();
+
+		if (!world.gui)
+			world.gui = new dat.GUI();
+
+		var self = this;
+		world.gui.add(this, 'drawDebugChunks').onChange((value) => {
+			for (let chunk of self.chunks) {
+				chunk._dirty = true;
+				chunk.drawDebugChunks = value;
+			}
+		});
 	}
 
 	/**
@@ -219,9 +230,11 @@ class Chunk {
 	update(scene) {
 		if (this.chunkObject) {
 			scene.remove(this.chunkObject);
+			this.disposeChunkObject();
 		}
 		if (this.debugObject) {
 			scene.remove(this.debugObject);
+			this.disposeDebugObject();
 		}
 		if (this.worldObject) {
 			this.world.removeEntity(this.worldObject);
@@ -252,7 +265,7 @@ class Chunk {
 		// add the 'world object' to the world
 		this.world.addEntity(this.worldObject);
 
-		if (DEBUG) {
+		if (this.drawDebugChunks) {
 			this.debugObject = this.createDebugObject();
 			scene.add(this.debugObject);
 		}
@@ -368,6 +381,29 @@ class Chunk {
 		mesh.translateZ(TILE_Z_INDEX + 1);
 
 		return mesh;
+	}
+
+	/**
+	 * @description - Used to dispose the debug mesh so that we don't waste resources
+	 */
+	disposeDebugObject() {
+		if (!this.debugObject)
+			return;
+
+		this.debugObject.material.map.dispose();
+		this.debugObject.material.dispose();
+		this.debugObject.geometry.dispose();
+	}
+
+	/**
+	 * @description - Used to dispose the chunk object in order to avoid wasting memory
+	 */
+	disposeChunkObject() {
+		if (!this.chunkObject)
+			return;
+
+		this.chunkObject.material.dispose();
+		this.chunkObject.geometry.dispose();
 	}
 
 	/**
