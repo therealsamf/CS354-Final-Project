@@ -22,6 +22,13 @@ class TimeOfDaySystem extends System {
 		this.timeOfDay = 0;
 
 		this.currentDelta = 0;
+		this.sunYComponent = 0.3;
+		this.dawn = 240;
+		this.dusk = 1320;
+		this.lightSpeed = 20;
+		this.lightThreshold = 1.0;
+
+		this.calculateSunFunction();
 
 		this.isDrawingSystem = false;
 	}
@@ -55,11 +62,27 @@ class TimeOfDaySystem extends System {
 			world.gui = new dat.GUI();
 
 		var self = this;
-		world.gui.add(this, 'updateTimeManually').onChange(() => {
+		let lightFolder = world.gui.addFolder('Sunlight');
+		lightFolder.add(this, 'updateTimeManually').onChange(() => {
 			self.currentDelta = 0;
 		});
-		world.gui.add(this, 'timeOfDay', 0, FULL_DAY * 2).listen();
-		world.gui.add(this, 'timeSpeed', 1, 25);
+
+
+
+		lightFolder.add(this, 'timeOfDay', 0, FULL_DAY * 2).listen();
+		lightFolder.add(this, 'timeSpeed', 1, 25);
+		lightFolder.add(this, 'sunYComponent', -1.0, 1.0);
+		this.thresholdController = lightFolder.add(this, 'lightThreshold', 0, this.thresholdMax);
+
+		lightFolder.add(this, 'dawn', 0, FULL_DAY).onChange(() => {
+			self.calculateSunFunction();
+		});
+		lightFolder.add(this, 'dusk', FULL_DAY, FULL_DAY * 2).onChange(() => {
+			self.calculateSunFunction();
+		});
+		lightFolder.add(this, 'lightSpeed', 0, 50).onChange(() => {
+			self.calculateSunFunction();
+		});
 
 	}
 
@@ -87,6 +110,7 @@ class TimeOfDaySystem extends System {
 
 		if (this.sun) {
 			this.sun.LightComponent.direction = this.calculateSunDirection();
+			this.sun.LightComponent.color = this.calculateSunColor();
 		}
 	}
 
@@ -101,15 +125,63 @@ class TimeOfDaySystem extends System {
 			timeOfDay = this.timeOfDay;
 		}
 
-
-		// right now, 12 hour days of pure sunlight.
-		let yComponent = -0.2;
+		let yComponent = this.sunYComponent;
 
 		// these values hard-coded for 720 minute days
 		let xComponent = Math.sin((timeOfDay / FULL_DAY) * Math.PI) * 0.8;
-		let zComponent = Math.sin((timeOfDay / (2 * FULL_DAY)) * Math.PI) * 1.0 - .5;
+		let zComponent = Math.sin((timeOfDay / (2 * FULL_DAY)) * Math.PI) - .5;
 
 		return new Vector3(xComponent, yComponent, zComponent);
+	}
+
+	/**
+	 * @description - Calculates the sun's color based on the time of day.
+	 * This color will be from black to white
+	 * @param {Number=} timeOfDay
+	 * @returns {Color}
+	 */
+	calculateSunColor(timeOfDay) {
+		if (timeOfDay === undefined) {
+			timeOfDay = this.timeOfDay;
+		}
+
+		if (timeOfDay <= this.dawn || timeOfDay >= this.dusk) {
+			return new Color('black');
+		}
+
+		let input = timeOfDay / (2 * FULL_DAY);
+
+		let color = new Color('white');
+		// console.log('value', this.getColorMultiplier(input));
+		return color.multiplyScalar(this.getColorMultiplier(input) );
+	}
+
+	/**
+	 * @description - Calculates the function used to determine the amount of sunlight to cast
+	 */
+	calculateSunFunction() {
+		let dawn = this.dawn / (FULL_DAY * 2),
+			dusk = this.dusk / (FULL_DAY * 2);
+		let maximumInput = (dawn + dusk) / 2,
+			maximumValue = - this.lightSpeed * (maximumInput - dawn) * (maximumInput - dusk);
+
+		this.thresholdMax = maximumValue;
+
+
+		if (this.thresholdController) {
+			this.thresholdController.__max = this.thresholdMax;
+			this.thresholdController.updateDisplay();
+		}
+
+		let self = this;
+		this.getColorMultiplier = (value) => {
+			let lightValue = - self.lightSpeed * (value - dawn) * (value - dusk);
+			if (lightValue > self.lightThreshold) {
+				return 1;
+			}
+			else
+				return lightValue / self.lightThreshold;
+		};
 	}
 }
 

@@ -6,8 +6,19 @@
 
 import {
 	CanvasTexture,
-	NearestFilter 
+	NearestFilter
 } from 'three';
+
+import { 
+ RawShaderMaterial,
+ BufferGeometry,
+ BufferAttribute,
+ Vector3,
+ Mesh
+} from 'three';
+
+import ObjectVertexShader from '../shaders/ObjectVertex.js';
+import ObjectFragmentShader from '../shaders/ObjectFragment.js';
 
 // hard coded for now
 const TILE_SIZE = 16,
@@ -70,7 +81,8 @@ class MapReader {
 		let rowIndex = 0,
 			columnIndex = 0;
 
-		let tiles = [];
+		let tiles = [],
+			objects = [];
 
 		for (let tileRow of mapData.tiles) {
 			columnIndex = 0;
@@ -79,6 +91,17 @@ class MapReader {
 				if (tile in mapData.tileTypes) {
 					let newTile = this.getTile(Math.floor(columnIndex - 0.5 * maxColumns), Math.floor(0.5 * maxRows - rowIndex), mapData.tileTypes[tile]);
 					tiles.push(newTile);
+				}
+				else if (tile in mapData.objectTypes) {
+					let object = this.findObject(objects, tile);
+					if (!object) {
+						object = this.createObject(mapData.objectTypes[tile], tile);
+						objects.push(object);
+					}
+
+					this.addTileToObject(Math.floor(columnIndex - 0.5 * maxColumns), Math.floor(0.5 * maxRows - rowIndex), object);
+
+
 				}
 
 				columnIndex += 1;
@@ -94,6 +117,11 @@ class MapReader {
 
 				for (let tile of tiles) {
 					self.world.addEntity(tile);
+				}
+			})
+			.then(() => {
+				for (let object of objects) {
+					self.parseObject(object);
 				}
 			});
 	}
@@ -187,31 +215,155 @@ class MapReader {
 	}
 
 	/**
-	 * @description - Adds a tile to the world from the given 
-	 * data
+	 * @description - Helper method to determine if 
+	 * the object the given tile is referring to
+	 * is already within the given list. This is a
+	 * separate method not only for readablility and code-separation
+	 * concerns but also because this method will probably change
+	 * @param {Array} objects - list of objects currently being parsed from the map
+	 * @param {String} tile - the tile that the map parsed from the map JSON file
+	 * @param {Object=} objectData - the data that accompanied the tile string from the JSON file
+	 * @returns {Object} the object from within `objects` or null
+	 */
+	findObject(objects, tile, objectData) {
+		// most likely to change because now it only supports one object per unique character
+		for (let object of objects) {
+			if (object.string && object.string === tile)
+				return object;
+		}
+		return null;
+	}
+
+	/**
+	 * @description - Creates and returns a javascript object based on the data retrieved from
+	 * the map JSON file
+	 * @param {Object} objectData
+	 * @param {String} tile
+	 * @returns {Object}
+	 */
+	createObject(objectData, tile) {
+		// this is likely to change, as more meta-data may be required to use the newly created object
+		return Object.assign({}, objectData, {string: tile});
+	}
+
+	/**
+	 * @description - Adds the given tile coordinates to the given object. This is used to track the 
+	 * objects location, as it may span over multiple tiles
 	 * @param {Number} x
 	 * @param {Number} y
-	 * @param {Object} data
+	 * @param {Object} object
 	 */
-	addTile(x, y, data) {
-		let entity = {
-			TileTransform: {
-				x: x,
-				y: y
-			},
-			TileComponent: {
-				atlas: data.texture,
-				xTextureCoords: data.xTextureCoords,
-				yTextureCoords: data.yTextureCoords,
+	addTileToObject(x, y, object) {
 
-				uvBottomLeft: data.uvBottomLeft,
-				uvBottomRight: data.uvBottomRight,
-				uvTopRight: data.uvTopRight,
-				uvTopLeft: data.uvTopLeft
+		// simple, perhaps memory wasting implementation, but good enough to work for now
+		if (!object.tiles) {
+			object.tiles = [];
+		}
+
+		object.tiles.push([x, y]);
+	}
+
+	/**
+	 * @description - Takes a completely parsed object and transforms the javascript data
+	 * structure into an entity that the tiny-ecs world can load
+	 * @param {Object} object
+	 * @param {Number} maxRows
+	 * @param {Number} maxColumns
+	 * @returns {Object} this object should be able to be directly fed into the tiny-ecs world
+	 */
+	parseObject(object, maxRows, maxColumns) {
+		
+		// world coordinates of the object
+		let objectX,
+			objectY;
+
+		// bottomleft-most tile and topright-most tile of the object
+		let bottomLeft,
+			topRight;
+
+		if (!object.tiles) {
+			console.error('Can\'t parse an object with no `tiles` array');
+			return;
+		}
+
+		for (let tile of object.tiles) {
+			if (!bottomLeft || (tile[0] <= bottomLeft[0] && tile[1] <= bottomLeft[1])) {
+				bottomLeft = tile;
 			}
-		};
 
-		this.world.addEntity(entity);
+			if (!topRight || (tile[0] >= topRight[0] && tile[1] >= topRight[1])) {
+				topRight = tile;
+			}
+		}
+
+
+		let objectTileWidth = topRight[0] - bottomLeft[0] + 1,
+			objectTileHeight = topRight[1] - bottomLeft[1] + 1;
+		objectX = (bottomLeft[0] + topRight[0] + 1) * 0.5 * 30;
+		objectY = (bottomLeft[1] + topRight[1] + 1) * 0.5 * 30;
+
+		let material = new RawShaderMaterial({
+			uniforms: {
+				map: { value: this.world._getTexture(object.diffuse.texture)},
+				normal_map: {value: this.world._getTexture(object.normal.texture)},
+				directionalLights: {
+					value: [],
+					properties: {
+						direction: {},
+						color: {}
+					}
+				}
+			},
+			vertexShader: ObjectVertexShader,
+			fragmentShader: ObjectFragmentShader
+		});
+
+		let geometry = new BufferGeometry();
+
+		geometry.addAttribute('position', new BufferAttribute(new Float32Array([
+			-0.5 * objectTileWidth * 30, -0.5 * objectTileHeight * 30, 2,
+			0.5 * objectTileWidth * 30, -0.5 * objectTileHeight * 30, 2,
+			0.5 * objectTileWidth * 30, 0.5 * objectTileHeight * 30, 2,
+			-0.5 * objectTileWidth * 30, 0.5 * objectTileHeight * 30, 2
+		]), 3));
+		geometry.setIndex(new BufferAttribute(new Uint8Array([
+			0, 1, 2,
+			2, 3, 0
+		]), 1));
+		geometry.addAttribute('uv', new BufferAttribute(new Float32Array([
+			object.diffuse.uvBottomLeft[0], object.diffuse.uvBottomLeft[1],
+			object.diffuse.uvTopRight[0], object.diffuse.uvBottomLeft[1],
+			object.diffuse.uvTopRight[0], object.diffuse.uvTopRight[1],
+			object.diffuse.uvBottomLeft[0], object.diffuse.uvTopRight[1],
+			object.diffuse.uvBottomLeft[0], object.diffuse.uvBottomLeft[1],
+			object.diffuse.uvTopRight[0], object.diffuse.uvTopRight[1],
+		]), 2));
+		geometry.addAttribute('ambientreflectionconstant', new BufferAttribute(new Float32Array([
+			object.material.ambientCoefficient, object.material.ambientCoefficient,
+			object.material.ambientCoefficient, object.material.ambientCoefficient,
+			object.material.ambientCoefficient, object.material.ambientCoefficient
+		]), 1));
+
+		let dummyDirectionalLight = {};
+		dummyDirectionalLight.direction = new Vector3(0.0, 0.0, 0.0);
+		dummyDirectionalLight.color = new Vector3(0.0, 0.0, 0.0);
+
+		material.uniforms.directionalLights.value.push(dummyDirectionalLight);
+
+		let mesh = new Mesh(geometry, material);
+		mesh.translateX(objectX);
+		mesh.translateY(objectY);
+
+		this.world.getScene().add(mesh);
+		this.world.addEntity({
+			ShaderComponent: {
+				material: material
+			},
+			TransformComponent: {
+				x: objectX,
+				y: objectY
+			}
+		});
 	}
 
 	/**
@@ -232,6 +384,8 @@ class MapReader {
 
 		return entity;
 	}
+
+
 }
 
 export default MapReader;

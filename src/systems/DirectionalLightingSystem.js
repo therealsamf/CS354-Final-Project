@@ -54,13 +54,13 @@ class DirectionalLightingSystem extends LightingSystem {
 					}};
 
 				for (let light of updatedLights) {
-					// let index = uniforms.directionalLights.value.indexOf(light.LightComponent);
+					let index = uniforms.directionalLights.value.indexOf(light.LightComponent);
 
-					// if (index < 0)
-					// 	uniforms.directionalLights.value.push(light.LightComponent);
-					// else {
-					uniforms.directionalLights.value.splice(0, 1, light.LightComponent);
-					// }
+					if (index < 0)
+						uniforms.directionalLights.value.push(light.LightComponent);
+					else {
+						uniforms.directionalLights.value.splice(0, 1, light.LightComponent);
+					}
 				}
 				
 			}

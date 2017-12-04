@@ -97,7 +97,7 @@ class DynamicLightingWorld extends World {
 	/**
 	 * @description - Used for getting textures
 	 * @param {String} textureURI
-	 * @returns {Texture}
+	 * @returns {Promise}
 	 */
 	getTexture(textureURI) {
 		if (!this.textures) {
@@ -111,6 +111,26 @@ class DynamicLightingWorld extends World {
 			let texture = this._textureLoader.load(textureURI);
 			this.textures[textureURI] = texture;
 			return Promise.resolve(texture);
+		}
+	}
+
+	/**
+	 * @description - Used for getting textures WITHOUT the promise
+	 * @param {String} textureURI
+	 * @returns {Texture}
+	 */
+	_getTexture(textureURI) {
+		if (!this.textures) {
+			this.textures = {};
+		}
+
+		if (this.textures[textureURI]) {
+			return this.textures[textureURI];
+		}
+		else {
+			let texture = this._textureLoader.load(textureURI);
+			this.textures[textureURI] = texture;
+			return texture;
 		}
 	}
 
