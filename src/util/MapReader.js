@@ -156,10 +156,17 @@ class MapReader {
 				}
 				uniqueTextures[tileComponent.diffuse.texture].push(tileComponent.diffuse);
 			}
+
+			if (tileComponent.height) {
+				if (!uniqueTextures[tileComponent.height.texture]) {
+					uniqueTextures[tileComponent.height.texture] = [];
+				}
+				uniqueTextures[tileComponent.height.texture].push(tileComponent.height);
+			}
 		}
 
 		let numberTextures = Object.keys(uniqueTextures).length,
-			canvasLength = (numberTextures % 2 == 0 ? numberTextures : numberTextures + 1) * TILE_SIZE,
+			canvasLength = 8 * TILE_SIZE,
 			textureWidth = canvasLength,
 			textureHeight = TILE_SIZE;
 
@@ -306,11 +313,21 @@ class MapReader {
 			uniforms: {
 				map: { value: this.world._getTexture(object.diffuse.texture)},
 				normal_map: {value: this.world._getTexture(object.normal.texture)},
+				height_map: {value: this.world._getTexture(object.height.texture)},
 				directionalLights: {
 					value: [],
 					properties: {
 						direction: {},
 						color: {}
+					}
+				},
+				pointLights: {
+					value: [],
+					properties: {
+						position: {},
+						color: {},
+						aAttenuation: 0.0,
+						bAttenuation: 0.0
 					}
 				}
 			},
@@ -348,22 +365,52 @@ class MapReader {
 		dummyDirectionalLight.direction = new Vector3(0.0, 0.0, 0.0);
 		dummyDirectionalLight.color = new Vector3(0.0, 0.0, 0.0);
 
+		let dummyPointLight = {};
+		dummyPointLight.position = new Vector3(0.0, 0.0, 10.0);
+		dummyPointLight.color = new Vector3(0.0, 0.0, 0.0);
+		dummyPointLight.aAttenuation = 0.0;
+		dummyPointLight.bAttenuation = 0.0;
+
+
 		material.uniforms.directionalLights.value.push(dummyDirectionalLight);
+		material.uniforms.pointLights.value.push(Object.assign({}, dummyPointLight));
+		material.uniforms.pointLights.value.push(Object.assign({}, dummyPointLight));
 
 		let mesh = new Mesh(geometry, material);
 		mesh.translateX(objectX);
 		mesh.translateY(objectY);
 
 		this.world.getScene().add(mesh);
-		this.world.addEntity({
-			ShaderComponent: {
-				material: material
-			},
-			TransformComponent: {
-				x: objectX,
-				y: objectY
-			}
-		});
+		if (!object.pointLight)
+			this.world.addEntity({
+				ShaderComponent: {
+					material: material
+				},
+				TransformComponent: {
+					x: objectX,
+					y: objectY
+				}
+			});
+		else {
+			this.world.addEntity({
+				ShaderComponent: {
+					material: material
+				},
+				TransformComponent: {
+					x: objectX,
+					y: objectY
+				},
+				LightComponent: {
+					dirty: true,
+					type: 'point',
+					position: new Vector3(objectX, objectY, object.pointLight.height),
+					color: new Vector3(object.pointLight.color[0], object.pointLight.color[1], object.pointLight.color[2]),
+					aAttenuation: object.pointLight.aAttenuation,
+					bAttenuation: object.pointLight.bAttenuation,
+					index: object.pointLight.index
+				}
+			});
+		}
 	}
 
 	/**

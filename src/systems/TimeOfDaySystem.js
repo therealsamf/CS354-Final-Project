@@ -46,10 +46,12 @@ class TimeOfDaySystem extends System {
 				timeOfDay: this.timeOfDay
 			},
 			LightComponent: {
+				type: 'directional',
 				direction: this.calculateSunDirection(),
 				// sun's color should be whitish
 				color: new Color(0xFFFFFF),
-				dirty: true
+				dirty: true,
+				index: 0
 			}
 		};
 

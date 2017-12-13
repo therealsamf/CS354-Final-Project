@@ -302,6 +302,15 @@ class Chunk {
 						direction: {},
 						color: {}
 					}
+				},
+				pointLights: {
+					value: [],
+					properties: {
+						position: {},
+						color: {},
+						aAttenuation: 0.0,
+						bAttenuation: 0.0
+					}
 				}
 			},
 			vertexShader: TileVertexShader,
@@ -312,7 +321,15 @@ class Chunk {
 		dummyDirectionalLight.direction = new Vector3(0.0, 0.0, 0.0);
 		dummyDirectionalLight.color = new Vector3(0.0, 0.0, 0.0);
 
+		let dummyPointLight = {};
+		dummyPointLight.position = new Vector3(0.0, 0.0, 10.0);
+		dummyPointLight.color = new Vector3(0.0, 0.0, 0.0);
+		dummyPointLight.aAttenuation = 0.0;
+		dummyPointLight.bAttenuation = 0.0;
+
 		material.uniforms.directionalLights.value.push(dummyDirectionalLight);
+		material.uniforms.pointLights.value.push(Object.assign({}, dummyPointLight));
+		material.uniforms.pointLights.value.push(Object.assign({}, dummyPointLight));
 
 		return material;
 	}
@@ -474,6 +491,7 @@ class Chunk {
 			uvs = [],
 			diffuseUVs = [],
 			normalUVs = [],
+			heightUVs = [],
 			ambientReflectionConstant = [];
 
 		for (let tile of this._tiles) {
@@ -489,6 +507,9 @@ class Chunk {
 				diffuseUVTopRight = tile.TileComponent.diffuse.uvTopRight;
 			let normalUVBottomLeft = tile.TileComponent.normal.uvBottomLeft,
 				normalUVTopRight = tile.TileComponent.normal.uvTopRight;
+			let heightUVBottomLeft = tile.TileComponent.height.uvBottomLeft,
+				heightUVTopRight = tile.TileComponent.height.uvTopRight;
+
 
 			offsets.push(offsetX);
 			offsets.push(offsetY);
@@ -498,10 +519,15 @@ class Chunk {
 			diffuseUVs.push(diffuseUVTopRight[0]);
 			diffuseUVs.push(diffuseUVTopRight[1]);
 
-			normalUVs.push(normalUVBottomLeft[0])
-			normalUVs.push(normalUVBottomLeft[1])
-			normalUVs.push(normalUVTopRight[0])
-			normalUVs.push(normalUVTopRight[1])
+			normalUVs.push(normalUVBottomLeft[0]);
+			normalUVs.push(normalUVBottomLeft[1]);
+			normalUVs.push(normalUVTopRight[0]);
+			normalUVs.push(normalUVTopRight[1]);
+
+			heightUVs.push(heightUVBottomLeft[0]);
+			heightUVs.push(heightUVBottomLeft[1]);
+			heightUVs.push(heightUVTopRight[0]);
+			heightUVs.push(heightUVTopRight[1]);
 
 			for (let value of [
 				0.0, 0.0,
@@ -520,12 +546,14 @@ class Chunk {
 		geometry.addAttribute('offset', new InstancedBufferAttribute(new Float32Array(offsets), 2));
 		let uvsAttribute = new BufferAttribute(new Float32Array(uvs), 2);
 		let diffuseUVsAttribute = new InstancedBufferAttribute(new Float32Array(diffuseUVs), 4);
+		let heightUVsAttribute = new InstancedBufferAttribute(new Float32Array(heightUVs), 4);
 		let normalUVsAttribute = new InstancedBufferAttribute(new Float32Array(normalUVs), 4);
 		let ambientReflectionConstantAttribute = new InstancedBufferAttribute(new Float32Array(ambientReflectionConstant), 1);
 
 		geometry.addAttribute('uv', uvsAttribute);
 		geometry.addAttribute('diffuseuvs', diffuseUVsAttribute);
 		geometry.addAttribute('normaluvs', normalUVsAttribute);
+		geometry.addAttribute('heightuvs', heightUVsAttribute);
 		geometry.addAttribute('ambientreflectionconstant', ambientReflectionConstantAttribute);
 
 		return geometry;

@@ -29,7 +29,7 @@ class DirectionalLightingSystem extends LightingSystem {
 		let updatedLights = [];
 
 		for (let lightEntity of this._lights) {
-			if (lightEntity.LightComponent.dirty)
+			if (lightEntity.LightComponent.dirty && lightEntity.LightComponent.type === 'directional')
 				updatedLights.push(lightEntity);
 		}
 
@@ -54,13 +54,11 @@ class DirectionalLightingSystem extends LightingSystem {
 					}};
 
 				for (let light of updatedLights) {
-					let index = uniforms.directionalLights.value.indexOf(light.LightComponent);
+					//let index = uniforms.directionalLights.value.indexOf(light.LightComponent);
 
-					if (index < 0)
-						uniforms.directionalLights.value.push(light.LightComponent);
-					else {
-						uniforms.directionalLights.value.splice(0, 1, light.LightComponent);
-					}
+					
+					uniforms.directionalLights.value.splice(light.LightComponent.index, 1, light.LightComponent);
+					
 				}
 				
 			}

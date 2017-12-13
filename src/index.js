@@ -5,7 +5,7 @@ import TileSystem from './systems/TileSystem';
 import DrawingSystem from './systems/DrawingSystem';
 import TimeOfDaySystem from './systems/TimeOfDaySystem';
 import DirectionalLightingSystem from './systems/DirectionalLightingSystem';
-
+import PointLightSystem from './systems/PointLightSystem';
 
 import MapReader from './util/MapReader';
 import RenderStats from './util/RenderStats';
@@ -32,12 +32,14 @@ let world = new World(),
 	drawingSystem = new DrawingSystem(),
 	tileSystem = new TileSystem(),
 	directionalLightingSystem = new DirectionalLightingSystem(),
+	pointLightSystem = new PointLightSystem(),
 	timeOfDaySystem = new TimeOfDaySystem(),
 	mapReader = new MapReader(world);
 
 world.addSystem(drawingSystem);
 world.addSystem(tileSystem);
 world.addSystem(directionalLightingSystem);
+world.addSystem(pointLightSystem);
 world.addSystem(timeOfDaySystem);
 
 
@@ -83,4 +85,4 @@ function update() {
 setInterval(update, 60 / 1000);
 animate();
 
-mapReader.readMap(path.resolve('assets', 'maps', 'map1.json'));
+mapReader.readMap('./assets/maps/map1.json');

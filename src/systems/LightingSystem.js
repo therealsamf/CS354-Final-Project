@@ -35,7 +35,7 @@ class LightingSystem extends System {
 		/* assuming that sub classes of this system 
 		 * will specify the kind of lights they want to manage
 		 */
-		else {
+		if (entity.LightComponent) {
 			this._lights.push(entity);
 		}
 	}
