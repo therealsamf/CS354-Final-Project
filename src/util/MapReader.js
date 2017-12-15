@@ -123,6 +123,11 @@ class MapReader {
 				for (let object of objects) {
 					self.parseObject(object);
 				}
+			})
+			.then(() => {
+				for (let object in mapData.objects) {
+					self.addObject(mapData.objects[object], maxColumns, maxRows);
+				}
 			});
 	}
 
@@ -327,7 +332,20 @@ class MapReader {
 						position: {},
 						color: {},
 						aAttenuation: 0.0,
-						bAttenuation: 0.0
+						bAttenuation: 0.0,
+						off: 0
+					}
+				},
+				spotLights: {
+					value: [],
+					properties: {
+						position: {},
+						direction: {},
+						angle: 0.0,
+						color: {},
+						aAttenuation: 0.0,
+						bAttenuation: 0.0,
+						off: 0
 					}
 				}
 			},
@@ -366,15 +384,27 @@ class MapReader {
 		dummyDirectionalLight.color = new Vector3(0.0, 0.0, 0.0);
 
 		let dummyPointLight = {};
-		dummyPointLight.position = new Vector3(0.0, 0.0, 10.0);
+		dummyPointLight.position = new Vector3(0.0, 0.0, 0.0);
 		dummyPointLight.color = new Vector3(0.0, 0.0, 0.0);
 		dummyPointLight.aAttenuation = 0.0;
 		dummyPointLight.bAttenuation = 0.0;
+		dummyPointLight.off = 0;
+
+		let dummySpotlight = {};
+		dummySpotlight.position = new Vector3(0.0, 0.0, 0.0);
+		dummySpotlight.color = new Vector3(0.0, 0.0, 0.0);
+		dummySpotlight.direction = new Vector3(0.0, 0.0, 0.0);
+		dummySpotlight.aAttenuation = 0.0;
+		dummySpotlight.bAttenuation = 0.0;
+		dummySpotlight.angle = 0.0;
+		dummySpotlight.off = 0;
 
 
 		material.uniforms.directionalLights.value.push(dummyDirectionalLight);
 		material.uniforms.pointLights.value.push(Object.assign({}, dummyPointLight));
 		material.uniforms.pointLights.value.push(Object.assign({}, dummyPointLight));
+		material.uniforms.spotLights.value.push(Object.assign({}, dummySpotlight));
+		material.uniforms.spotLights.value.push(Object.assign({}, dummySpotlight));
 
 		let mesh = new Mesh(geometry, material);
 		mesh.translateX(objectX);
@@ -430,6 +460,40 @@ class MapReader {
 		};
 
 		return entity;
+	}
+
+	/**
+	 * @description - Used for adding an 'invisible' object to the scene
+	 * @param {Object} object
+	 */
+	addObject(object, maxColumns, maxRows) {
+		if (object) {
+
+			let objectX = Math.floor(object.position[0] - 0.5 * maxColumns);
+			let objectY = Math.floor(0.5 * maxRows - object.position[1]);
+
+
+			objectX = objectX * 30;
+			objectY = objectY * 30;
+			
+			this.world.addEntity({
+				TransformComponent: {
+					x: objectX,
+					y: objectY
+				},
+				LightComponent: {
+					type: 'spot',
+					direction: new Vector3(object.direction[0], object.direction[1], object.direction[2]),
+					angle: object.angle,
+					index: object.index,
+					color: new Vector3(object.color[0], object.color[1], object.color[2]),
+					position: new Vector3(objectX, objectY, 255 - object.height),
+					aAttenuation: object.aAttenuation,
+					bAttenuation: object.bAttenuation,
+					dirty: true
+				}
+			});
+		}
 	}
 
 

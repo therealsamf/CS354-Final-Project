@@ -309,6 +309,18 @@ class Chunk {
 						position: {},
 						color: {},
 						aAttenuation: 0.0,
+						bAttenuation: 0.0,
+						off: 0
+					}
+				},
+				spotLights: {
+					value: [],
+					properties: {
+						position: {},
+						direction: {},
+						angle: 0.0,
+						color: {},
+						aAttenuation: 0.0,
 						bAttenuation: 0.0
 					}
 				}
@@ -326,10 +338,21 @@ class Chunk {
 		dummyPointLight.color = new Vector3(0.0, 0.0, 0.0);
 		dummyPointLight.aAttenuation = 0.0;
 		dummyPointLight.bAttenuation = 0.0;
+		dummyPointLight.off = 0;
+
+		let dummySpotlight = {};
+		dummySpotlight.position = new Vector3(0.0, 0.0, 0.0);
+		dummySpotlight.color = new Vector3(0.0, 0.0, 0.0);
+		dummySpotlight.direction = new Vector3(0.0, 0.0, 0.0);
+		dummySpotlight.aAttenuation = 0.0;
+		dummySpotlight.bAttenuation = 0.0;
+		dummySpotlight.angle = 0.0;
 
 		material.uniforms.directionalLights.value.push(dummyDirectionalLight);
 		material.uniforms.pointLights.value.push(Object.assign({}, dummyPointLight));
 		material.uniforms.pointLights.value.push(Object.assign({}, dummyPointLight));
+		material.uniforms.spotLights.value.push(Object.assign({}, dummySpotlight));
+		material.uniforms.spotLights.value.push(Object.assign({}, dummySpotlight));
 
 		return material;
 	}

@@ -3,6 +3,7 @@ let fragmentShaderSrc = `
 
 	#define NUM_DIRECTIONAL_LIGHTS 1
 	#define NUM_POINt_LIGHTS 2
+	#define MAX_SPOT_LIGHTS 2
 	
 	precision highp float;
 
@@ -12,8 +13,19 @@ let fragmentShaderSrc = `
 	};
 
 	struct PointLight {
+		int off;
 		vec3 position;
 		vec3 color;
+		float aAttenuation;
+		float bAttenuation;
+	};
+
+	struct SpotLight {
+		int off;
+		vec3 position;
+		vec3 direction;
+		vec3 color;
+		float angle;
 		float aAttenuation;
 		float bAttenuation;
 	};
@@ -23,6 +35,7 @@ let fragmentShaderSrc = `
 	uniform sampler2D height_map;
 	uniform DirectionalLight directionalLights[NUM_DIRECTIONAL_LIGHTS];
 	uniform PointLight pointLights[NUM_POINt_LIGHTS];
+	uniform SpotLight spotLights[MAX_SPOT_LIGHTS];
 
 	varying vec3 vPosition;
 	varying vec2 vDiffuseUVs;
@@ -59,6 +72,8 @@ let fragmentShaderSrc = `
 		}
 
 		for (int i = 0; i < NUM_POINt_LIGHTS; i++) {
+			if (pointLights[i].off == 1)
+				continue;
 			vec3 lightPosition = pointLights[i].position;
 			vec3 direction = realPosition - lightPosition;
 			float distance = length(direction);
@@ -68,6 +83,25 @@ let fragmentShaderSrc = `
 
 			float lambertianReflectance = max(dot(normal, normalize(direction)), 0.0);
 			resultingColor += lambertianReflectance * vec3(diffuseColor) * attenuation * pointLights[i].color;
+		}
+
+		for (int i = 0; i < MAX_SPOT_LIGHTS; i++) {
+			if (spotLights[i].off == 1)
+				continue;
+			vec3 lightPosition = spotLights[i].position;
+			vec3 direction = realPosition - lightPosition;
+			float distance = length(direction);
+
+			float spotLightSin = dot(normalize(direction), normalize(-spotLights[i].direction));
+			if (spotLightSin < spotLights[i].angle)
+				continue;
+
+			float attenuation = clamp(1.0 / (1.0 + spotLights[i].aAttenuation * distance + spotLights[i].bAttenuation * distance * distance), 0.0, 1.0);
+			if (attenuation == 0.0)
+				continue;
+
+			float lambertianReflectance = max(dot(normal, normalize(direction)), 0.0);
+			resultingColor += lambertianReflectance * vec3(diffuseColor) * attenuation * spotLights[i].color;
 		}
 
 		vec4 ambientLighting = vec4(0.15, 0.15, 0.15, 0.0);

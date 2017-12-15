@@ -6,6 +6,11 @@ import DrawingSystem from './systems/DrawingSystem';
 import TimeOfDaySystem from './systems/TimeOfDaySystem';
 import DirectionalLightingSystem from './systems/DirectionalLightingSystem';
 import PointLightSystem from './systems/PointLightSystem';
+import SpotlightSystem from './systems/SpotlightSystem';
+import SpotlightRotationSystem from './systems/SpotlightRotationSystem';
+import PointLightParameterSystem from './systems/PointLightParameterSystem';
+import SpotlightParameterSystem from './systems/SpotlightParameterSystem';
+
 
 import MapReader from './util/MapReader';
 import RenderStats from './util/RenderStats';
@@ -33,6 +38,7 @@ let world = new World(),
 	tileSystem = new TileSystem(),
 	directionalLightingSystem = new DirectionalLightingSystem(),
 	pointLightSystem = new PointLightSystem(),
+	spotlightSystem = new SpotlightSystem(),
 	timeOfDaySystem = new TimeOfDaySystem(),
 	mapReader = new MapReader(world);
 
@@ -41,6 +47,10 @@ world.addSystem(tileSystem);
 world.addSystem(directionalLightingSystem);
 world.addSystem(pointLightSystem);
 world.addSystem(timeOfDaySystem);
+world.addSystem(spotlightSystem);
+world.addSystem(new SpotlightRotationSystem());
+world.addSystem(new PointLightParameterSystem());
+world.addSystem(new SpotlightParameterSystem());
 
 
 let currentDrawTime = new Date().getTime(),
